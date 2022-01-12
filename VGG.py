@@ -1,9 +1,5 @@
 import tensorflow as tf
 
-
-
-
-
 def block(x, n_convs, filters, kernel_size, activation, pool_size, pool_stride, block_name):
   '''
   Defines a block in the VGG network.
@@ -78,3 +74,63 @@ def VGG_16(image_input):
   # return the outputs at each stage. you will only need two of these in this particular exercise 
   # but we included it all in case you want to experiment with other types of decoders.
   return (p1, p2, p3, p4, c7)
+
+def fcn8_decoder(convs, n_classes):
+  '''
+  Defines the FCN 8 decoder.
+
+  Args:
+    convs (tuple of tensors) - output of the encoder network
+    n_classes (int) - number of classes
+
+  Returns:
+    tensor with shape (height, width, n_classes) containing class probabilities
+  '''
+
+  # unpack the output of the encoder
+  f1, f2, f3, f4, f5 = convs
+  
+  # upsample the output of the encoder then crop extra pixels that were introduced
+  o = tf.keras.layers.Conv2DTranspose(n_classes , kernel_size=(4,4) ,  strides=(2,2) , use_bias=False )(f5)
+  o = tf.keras.layers.Cropping2D(cropping=(1,1))(o)
+
+  # load the pool 4 prediction and do a 1x1 convolution to reshape it to the same shape of `o` above
+  o2 = f4
+  o2 = ( tf.keras.layers.Conv2D(n_classes , ( 1 , 1 ) , activation='relu' , padding='same'))(o2)
+
+  # add the results of the upsampling and pool 4 prediction
+  o = tf.keras.layers.Add()([o, o2])
+
+  # upsample the resulting tensor of the operation you just did
+  o = (tf.keras.layers.Conv2DTranspose( n_classes , kernel_size=(4,4) ,  strides=(2,2) , use_bias=False ))(o)
+  o = tf.keras.layers.Cropping2D(cropping=(1, 1))(o)
+
+  # load the pool 3 prediction and do a 1x1 convolution to reshape it to the same shape of `o` above
+  o2 = f3
+  o2 = ( tf.keras.layers.Conv2D(n_classes , ( 1 , 1 ) , activation='relu' , padding='same'))(o2)
+
+  # add the results of the upsampling and pool 3 prediction
+  o = tf.keras.layers.Add()([o, o2])
+  
+  # upsample up to the size of the original image
+  o = tf.keras.layers.Conv2DTranspose(n_classes , kernel_size=(8,8) ,  strides=(8,8) , use_bias=False )(o)
+
+  # append a softmax to get the class probabilities
+  o = (tf.keras.layers.Activation('softmax'))(o)
+
+  return o
+
+def segmentation_model():
+  '''
+  Defines the final segmentation model by chaining together the encoder and decoder.
+
+  Returns:
+    keras Model that connects the encoder and decoder networks of the segmentation model
+  '''
+  
+  inputs = tf.keras.layers.Input(shape=(224,224,3,))
+  convs = VGG_16(image_input=inputs)
+  outputs = fcn8_decoder(convs, 12)
+  model = tf.keras.Model(inputs=inputs, outputs=outputs)
+  
+  return model
