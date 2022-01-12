@@ -10,7 +10,7 @@ import urllib.request
 
 print("Tensorflow version " + tf.__version__)
 
-# download the dataset (zipped file)
+# download the dataset (zipped file) using bash
 #gdown --id 0B0d9ZiqAgFkiOHR1NTJhWVJMNEU -O D:/28_GitHub/VGG-16/fcnn-dataset.zip 
 
 # extract the downloaded dataset to a local directory: /tmp/fcnn

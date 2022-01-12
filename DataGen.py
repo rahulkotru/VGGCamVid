@@ -4,6 +4,8 @@ import PIL.Image, PIL.ImageFont, PIL.ImageDraw
 import numpy as np
 import tensorflow as tf
 from matplotlib import pyplot as plt
+import seaborn as sns
+from VGG import *
 
 class_names = ['sky', 'building','column/pole', 'road', 'side walk', 'vegetation', 'traffic light', 'fence', 'vehicle', 'pedestrian', 'byciclist', 'void']
 
@@ -268,3 +270,31 @@ def list_show_annotation(dataset):
     plt.yticks([])
     plt.xticks([])
     show_annotation_and_image(image.numpy(), annotation.numpy())
+
+
+list_show_annotation(training_dataset)
+list_show_annotation(validation_dataset)
+
+
+
+model = segmentation_model()
+model.summary()
+
+sgd = tf.keras.optimizers.SGD(lr=1E-2, momentum=0.9, nesterov=True)
+
+model.compile(loss='categorical_crossentropy',
+              optimizer=sgd,
+              metrics=['accuracy'])
+
+train_count = 367
+
+# number of validation images
+validation_count = 101
+
+EPOCHS = 170
+
+steps_per_epoch = train_count//BATCH_SIZE
+validation_steps = validation_count//BATCH_SIZE
+
+history = model.fit(training_dataset,
+                    steps_per_epoch=steps_per_epoch, validation_data=validation_dataset, validation_steps=validation_steps, epochs=EPOCHS)
