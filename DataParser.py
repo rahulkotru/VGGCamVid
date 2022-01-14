@@ -1,12 +1,5 @@
-import os
 import zipfile
-import PIL.Image, PIL.ImageFont, PIL.ImageDraw
-import numpy as np
 import tensorflow as tf
-from matplotlib import pyplot as plt
-import tensorflow_datasets as tfds
-import seaborn as sns
-import urllib.request
 
 print("Tensorflow version " + tf.__version__)
 
