@@ -20,14 +20,12 @@ def get_images_and_segments_test_arrays():
 
   return y_true_images, y_true_segments
 
-# load the ground truth images and segmentation masks
 y_true_images, y_true_segments = get_images_and_segments_test_arrays()
 
 
-# get the model prediction
+
 results = model.predict(validation_dataset, steps=validation_steps)
 
-# for each pixel, get the slice number which has the highest probability
 results = np.argmax(results, axis=3)
 
 def compute_metrics(y_true, y_pred):
