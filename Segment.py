@@ -50,7 +50,35 @@ def compute_metrics(y_true, y_pred):
 
   return class_wise_iou, class_wise_dice_score
 
+
 integer_slider = 0
+def show_predictions(image, labelmaps, titles, iou_list, dice_score_list):
+
+
+  true_img = give_color_to_annotation(labelmaps[1])
+  pred_img = give_color_to_annotation(labelmaps[0])
+
+  image = image + 1
+  image = image * 127.5
+  images = np.uint8([image, pred_img, true_img])
+
+  metrics_by_id = [(idx, iou, dice_score) for idx, (iou, dice_score) in enumerate(zip(iou_list, dice_score_list)) if iou > 0.0]
+  metrics_by_id.sort(key=lambda tup: tup[1], reverse=True)  # sorts in place
+  
+  display_string_list = ["{}: IOU: {} Dice Score: {}".format(class_names[idx], iou, dice_score) for idx, iou, dice_score in metrics_by_id]
+  display_string = "\n\n".join(display_string_list) 
+
+  plt.figure(figsize=(15, 4))
+
+  for idx, im in enumerate(images):
+    plt.subplot(1, 3, idx+1)
+    if idx == 1:
+      plt.xlabel(display_string)
+    plt.xticks([])
+    plt.yticks([])
+    plt.title(titles[idx], fontsize=12)
+    plt.imshow(im)
+
 
 iou, dice_score = compute_metrics(y_true_segments[integer_slider], results[integer_slider])  
 
