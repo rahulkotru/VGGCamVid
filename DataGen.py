@@ -10,30 +10,15 @@ from VGG import *
 class_names = ['sky', 'building','column/pole', 'road', 'side walk', 'vegetation', 'traffic light', 'fence', 'vehicle', 'pedestrian', 'byciclist', 'void']
 
 def map_filename_to_image_and_mask(t_filename, a_filename, height=224, width=224):
-    '''
-    Preprocesses the dataset by:
-        * resizing the input image and label maps
-        * normalizing the input image pixels
-        * reshaping the label maps from (height, width, 1) to (height, width, 12)
 
-    Args:
-        t_filename (string) -- path to the raw input image
-        a_filename (string) -- path to the raw annotation (label map) file
-        height (int) -- height in pixels to resize to
-        width (int) -- width in pixels to resize to
 
-    Returns:
-        image (tensor) -- preprocessed image
-        annotation (tensor) -- preprocessed annotation
-    '''
-
-    # Convert image and mask files to tensors 
+    
     img_raw = tf.io.read_file(t_filename)
     anno_raw = tf.io.read_file(a_filename)
     image = tf.image.decode_jpeg(img_raw)
     annotation = tf.image.decode_jpeg(anno_raw)
     
-    # Resize image and segmentation mask
+    
     image = tf.image.resize(image, (height, width,))
     annotation = tf.image.resize(annotation, (height, width,))
     image = tf.reshape(image, (height, width, 3,))
@@ -41,14 +26,14 @@ def map_filename_to_image_and_mask(t_filename, a_filename, height=224, width=224
     annotation = tf.reshape(annotation, (height, width, 1,))
     stack_list = []
 
-    # Reshape segmentation masks
+    
     for c in range(len(class_names)):
         mask = tf.equal(annotation[:,:,0], tf.constant(c))
         stack_list.append(tf.cast(mask, dtype=tf.int32))
     
     annotation = tf.stack(stack_list, axis=2)
 
-    # Normalize pixels in the input image
+    
     image = image/127.5
     image -= 1
 
@@ -56,22 +41,12 @@ def map_filename_to_image_and_mask(t_filename, a_filename, height=224, width=224
 
 
 
-        # Utilities for preparing the datasets
+    
 
 BATCH_SIZE = 64
 
 def get_dataset_slice_paths(image_dir, label_map_dir):
-    '''
-    generates the lists of image and label map paths
     
-    Args:
-        image_dir (string) -- path to the input images directory
-        label_map_dir (string) -- path to the label map directory
-
-    Returns:
-        image_paths (list of strings) -- paths to each image file
-        label_map_paths (list of strings) -- paths to each label map
-    '''
     image_file_list = os.listdir(image_dir)
     label_map_file_list = os.listdir(label_map_dir)
     image_paths = [os.path.join(image_dir, fname) for fname in image_file_list]
@@ -81,16 +56,7 @@ def get_dataset_slice_paths(image_dir, label_map_dir):
 
 
 def get_training_dataset(image_paths, label_map_paths):
-    '''
-    Prepares shuffled batches of the training set.
     
-    Args:
-        image_paths (list of strings) -- paths to each image file in the train set
-        label_map_paths (list of strings) -- paths to each label map in the train set
-
-    Returns:
-        tf Dataset containing the preprocessed train set
-    '''
     training_dataset = tf.data.Dataset.from_tensor_slices((image_paths, label_map_paths))
     training_dataset = training_dataset.map(map_filename_to_image_and_mask)
     training_dataset = training_dataset.shuffle(100, reshuffle_each_iteration=True)
@@ -102,16 +68,7 @@ def get_training_dataset(image_paths, label_map_paths):
 
 
 def get_validation_dataset(image_paths, label_map_paths):
-    '''
-    Prepares batches of the validation set.
     
-    Args:
-        image_paths (list of strings) -- paths to each image file in the val set
-        label_map_paths (list of strings) -- paths to each label map in the val set
-
-    Returns:
-        tf Dataset containing the preprocessed validation set
-    '''
     validation_dataset = tf.data.Dataset.from_tensor_slices((image_paths, label_map_paths))
     validation_dataset = validation_dataset.map(map_filename_to_image_and_mask)
     validation_dataset = validation_dataset.batch(BATCH_SIZE)
@@ -120,36 +77,25 @@ def get_validation_dataset(image_paths, label_map_paths):
     return validation_dataset
 
 
-# get the paths to the images
+
 training_image_paths, training_label_map_paths = get_dataset_slice_paths('/tmp/fcnn/dataset1/images_prepped_train/','/tmp/fcnn/dataset1/annotations_prepped_train/')
 validation_image_paths, validation_label_map_paths = get_dataset_slice_paths('/tmp/fcnn/dataset1/images_prepped_test/','/tmp/fcnn/dataset1/annotations_prepped_test/')
 
-# generate the train and val sets
+
 training_dataset = get_training_dataset(training_image_paths, training_label_map_paths)
 validation_dataset = get_validation_dataset(validation_image_paths, validation_label_map_paths)
 
 
-# generate a list that contains one color for each class
+
 colors = sns.color_palette(None, len(class_names))
 
-# print class name - normalized RGB tuple pairs
-# the tuple values will be multiplied by 255 in the helper functions later
-# to convert to the (0,0,0) to (255,255,255) RGB values you might be familiar with
+
 for class_name, color in zip(class_names, colors):
   print(f'{class_name} -- {color}')
 
 
 
 def fuse_with_pil(images):
-  '''
-  Creates a blank image and pastes input images
-
-  Args:
-    images (list of numpy arrays) - numpy array representations of the images to paste
-  
-  Returns:
-    PIL Image object containing the images
-  '''
 
   widths = (image.shape[1] for image in images)
   heights = (image.shape[0] for image in images)
@@ -168,17 +114,7 @@ def fuse_with_pil(images):
 
 
 def give_color_to_annotation(annotation):
-  '''
-  Converts a 2-D annotation to a numpy array with shape (height, width, 3) where
-  the third axis represents the color channel. The label values are multiplied by
-  255 and placed in this axis to give color to the annotation
 
-  Args:
-    annotation (numpy array) - label map array
-  
-  Returns:
-    the annotation array with an additional color channel/axis
-  '''
   seg_img = np.zeros( (annotation.shape[0],annotation.shape[1], 3) ).astype('float')
   
   for c in range(12):
@@ -191,16 +127,7 @@ def give_color_to_annotation(annotation):
 
 
 def show_predictions(image, labelmaps, titles, iou_list, dice_score_list):
-  '''
-  Displays the images with the ground truth and predicted label maps
 
-  Args:
-    image (numpy array) -- the input image
-    labelmaps (list of arrays) -- contains the predicted and ground truth label maps
-    titles (list of strings) -- display headings for the images to be displayed
-    iou_list (list of floats) -- the IOU values for each class
-    dice_score_list (list of floats) -- the Dice Score for each vlass
-  '''
 
   true_img = give_color_to_annotation(labelmaps[1])
   pred_img = give_color_to_annotation(labelmaps[0])
@@ -228,13 +155,7 @@ def show_predictions(image, labelmaps, titles, iou_list, dice_score_list):
 
 
 def show_annotation_and_image(image, annotation):
-  '''
-  Displays the image and its annotation side by side
 
-  Args:
-    image (numpy array) -- the input image
-    annotation (numpy array) -- the label map
-  '''
   new_ann = np.argmax(annotation, axis=2)
   seg_img = give_color_to_annotation(new_ann)
   
@@ -249,12 +170,7 @@ def show_annotation_and_image(image, annotation):
 
 
 def list_show_annotation(dataset):
-  '''
-  Displays images and its annotations side by side
 
-  Args:
-    dataset (tf Dataset) - batch of images and annotations
-  '''
 
   ds = dataset.unbatch()
   ds = ds.shuffle(buffer_size=100)
@@ -263,8 +179,6 @@ def list_show_annotation(dataset):
   plt.title("Images And Annotations")
   plt.subplots_adjust(bottom=0.1, top=0.9, hspace=0.05)
 
-  # we set the number of image-annotation pairs to 9
-  # feel free to make this a function parameter if you want
   for idx, (image, annotation) in enumerate(ds.take(9)):
     plt.subplot(3, 3, idx + 1)
     plt.yticks([])
@@ -288,7 +202,7 @@ model.compile(loss='categorical_crossentropy',
 
 train_count = 367
 
-# number of validation images
+
 validation_count = 101
 
 EPOCHS = 170
